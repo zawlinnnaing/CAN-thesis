@@ -52,7 +52,7 @@ def linear(input_, output_size, scope=None, stddev=0.02, ):
 
 
 def checkpoint_save(sess, saver, checkpoint_path_dir, counter):
-    model_name = "CAN.model"
+    model_name = "DCGAN.model"
     # checkpoint_path_dir = os.path.join('checkpoint', 'wikiart')
     if not os.path.exists(checkpoint_path_dir):
         os.makedirs(checkpoint_path_dir)

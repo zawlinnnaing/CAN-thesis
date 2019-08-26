@@ -14,10 +14,20 @@ def imread(path):
 
 
 def transform(image, input_height, input_width, resize_height=64, resize_width=64, crop=False):
+    """
+    Transforming image from range [0 255] to [-1 1]
+    :param image:
+    :param input_height:
+    :param input_width:
+    :param resize_height:
+    :param resize_width:
+    :param crop:
+    :return:
+    """
     cropped_image = image.resize((resize_width, resize_height))
     cropped_array = np.asarray(cropped_image) / 127.5 - 1.
 
-    if cropped_array.shape == (256, 256):
+    if cropped_array.shape == (input_height, input_width):
         cropped_array = np.stack((cropped_array,) * 3, axis=-1)
     elif cropped_array.shape[2] > 3:
         print('Array Shape :', cropped_array.shape)
@@ -38,14 +48,19 @@ def save_images(images, size, image_path):
 
 
 def inverse_transform(images):
-    return (images + 1.) * 127.5
+    """
+    Change image from range [-1 1] to [0 1]
+    :param images:
+    :return:
+    """
+    return (images + 1.) / 2.
 
 
 def imsave(images, size, path):
     array = np.squeeze(merge(images, size))
     print("Sample image array dtype: ", array.dtype)
-    image = Image.fromarray(array.astype('uint8'))
-    display(image)
+    img = (255 * array).astype(np.uint8)
+    image = Image.fromarray(img)
     return image.save(path)
 
 
@@ -72,3 +87,11 @@ def image_manifold_size(num_images):
     manifold_w = 4
     assert manifold_h * manifold_w == num_images
     return manifold_h, manifold_w
+
+
+def save_single_image(img_array, filename):
+    img_array = np.squeeze(img_array)
+    img_array = inverse_transform(img_array)
+    img_array = (255 * img_array).astype(np.uint8)
+    img = Image.fromarray(img_array)
+    img.save(filename)

@@ -1,10 +1,4 @@
-#############################################
-# Date          : 2018.03.25
-# Programmer    : Seounggyu Kim
-# description   : CAN 모델
-# Update Date   : 2018.04.30
-# Update        : DCGAN 텐서보드 추가
-#############################################
+
 
 import os
 from glob import glob
@@ -12,8 +6,8 @@ import tensorflow as tf
 import numpy as np
 from six.moves import xrange
 
-from ops import *
-from utils import *
+# from ops import *
+# from utils import *
 
 
 class DCGAN(object):
@@ -21,6 +15,11 @@ class DCGAN(object):
         self.sess = sess
         self.data = glob(os.path.join("./", 'wikiart',
                                       '*.jpg'))
+        self.sample_dir = 'samples'
+
+        if not os.path.exists(self.sample_dir):
+            print('NO sample directory => Making sample directory')
+            os.makedirs(self.sample_dir)
 
     def build_model(self):
         ## Creating a variable
@@ -81,10 +80,10 @@ class DCGAN(object):
 
     def train(self):
         # Creating Optimizer
-        discriminator_optimizer = tf.train.AdamOptimizer(0.0002, beta1=0.5).minimize(self.discriminator_loss,
-                                                                                     var_list=self.discriminator_vars)
-        generator_optimizer = tf.train.AdamOptimizer(0.0002, beta1=0.5).minimize(self.generator_loss,
-                                                                                 var_list=self.generator_vars)
+        discriminator_optimizer = tf.train.AdamOptimizer(1e-4, beta1=0.7).minimize(self.discriminator_loss,
+                                                                                   var_list=self.discriminator_vars)
+        generator_optimizer = tf.train.AdamOptimizer(1e-4, beta1=0.7).minimize(self.generator_loss,
+                                                                               var_list=self.generator_vars)
 
         #### tensorboard
         generator_optimizer_summary = tf.summary.merge(
@@ -113,8 +112,10 @@ class DCGAN(object):
 
         # checkpoint load
         # checkpoint_dir_path = os.path.join(self.checkpoint_dir, self.checkpint_dir_model)
-        checkpoint_dir_path = os.path.join('checkpoint', 'celebA')
-        could_load, checkpoint_counter = checkpoint_load(self.sess, self.saver, 'checkpoint', 'celebA')
+        drive_checkpoint_dir = 'drive/My Drive/checkpoint/DCGAN'
+        checkpoint_model = 'wikiart'
+        checkpoint_dir_path = os.path.join(drive_checkpoint_dir, checkpoint_model)
+        could_load, checkpoint_counter = checkpoint_load(self.sess, self.saver, drive_checkpoint_dir, checkpoint_model)
         if could_load:
             counter = checkpoint_counter
             print(" [*] Load SUCCESS")
@@ -163,7 +164,7 @@ class DCGAN(object):
 
                 # if np.mod(counter, 10) == 1:
                 print("Epoch: [%2d/%2d] [%4d/%4d] , d_loss: %.8f, g_loss: %.8f" % (
-                epoch, 25, index, batch_index, errD_fake + errD_real, errG))
+                    epoch, 25, index, batch_index, errD_fake + errD_real, errG))
 
                 if np.mod(counter, 100) == 1:
                     try:
