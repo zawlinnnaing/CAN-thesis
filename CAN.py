@@ -286,11 +286,11 @@ class CAN(object):
                         samples = self.sess.run(self.sampler, feed_dict={self.random_noise: sample_random_noise,
                                                                          self.real_image: sample_images,
                                                                          self.y: sample_labels})
-                        # save_images(samples, image_manifold_size(samples.shape[0]),
-                        #             './{}/train_{:02d}_{:04d}.png'.format('samples', epoch, index))
-                        print(samples.shape)
-                        save_single_image(samples,
-                                          './{}/new_sampler_train_{:02d}_{:04d}.png'.format('samples', epoch, index))
+                        save_images(samples, image_manifold_size(samples.shape[0]),
+                                    './{}/train_{:02d}_{:04d}.png'.format('samples', epoch, index))
+                        # print(samples.shape)
+                        # save_single_image(samples,
+                        #                   './{}/new_sampler_train_{:02d}_{:04d}.png'.format('samples', epoch, index))
                         print("[SAVE IMAGE]")
                     except Exception as e:
                         print("image save error! ", e)
