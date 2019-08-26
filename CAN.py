@@ -15,8 +15,6 @@ class CAN(object):
         self.sess = sess
         self.data = glob(os.path.join("./", 'wikiart',
                                       '*.jpg'))
-        self.data = self.data[:50000]
-
         self.sample_size = 32
         self.batch_size = 32
         self.epoch = 100
@@ -24,12 +22,12 @@ class CAN(object):
         self.label_dim = 137  # wikiart class num
         self.random_noise_dim = 100
 
-        self.input_size = 512
-        self.output_size = 512
+        self.input_size = 256
+        self.output_size = 256
 
         self.sample_dir = 'samples'
-        # self.checkpoint_dir = 'drive/My Drive/checkpoint'
-        self.checkpoint_dir = 'drive/My Drive/new_sampler_checkpoint'
+        self.checkpoint_dir = 'drive/My Drive/checkpoint'
+        # self.checkpoint_dir = 'drive/My Drive/new_sampler_checkpoint'
         self.checkpint_dir_model = 'wikiart'
         self.data_dir = 'data'
 
@@ -69,7 +67,8 @@ class CAN(object):
     def build_model(self):
         ## Creating a variable
         self.y = tf.placeholder(tf.float32, [None, self.label_dim], name='y')
-        self.real_image = tf.placeholder(tf.float32, [self.batch_size, 512, 512, 3], name='real_images')
+        self.real_image = tf.placeholder(tf.float32, [self.batch_size, self.input_size, self.input_size, 3],
+                                         name='real_images')
         self.random_noise = tf.placeholder(tf.float32, [None, self.random_noise_dim], name='random_noise')
 
         #### tensorboard
@@ -79,6 +78,7 @@ class CAN(object):
         ##  Building model
         # Creating generator / discriminator
         self.generator = self.generator(self.random_noise)
+
         self.discriminator_police_sigmoid, self.discriminator_police, self.discriminator_police_class_softmax, self.discriminator_police_class = self.discriminator(
             self.real_image, reuse=False)
         self.discriminator_thief_sigmoid, self.discriminator_thief, self.discriminator_thief_class_softmax, self.discriminator_thief_class = self.discriminator(
@@ -86,22 +86,24 @@ class CAN(object):
         self.sampler = self.sampler(self.random_noise)
 
         #### tensorboard
+
+        # discriminator real image summary
         self.discriminator_police_summary = tf.summary.histogram("discriminator_police_summary",
                                                                  self.discriminator_police_sigmoid)
-        # d_sum
-
+        # discriminator real image class summary
         self.discriminator_police_class_summary = tf.summary.histogram("discriminator_police_class_summary",
                                                                        self.discriminator_police_class_softmax)
-        # d_c_sum
-
+        # discriminator fake image summary
         self.discriminator_thief_summary = tf.summary.histogram("discriminator_thief_summary",
                                                                 self.discriminator_thief_sigmoid)
-        # d__sum
+        # discriminator fake image class summary
         self.discriminator_thief_class_summary = tf.summary.histogram("discriminator_thief_class_summary",
                                                                       self.discriminator_thief_class_softmax)
-        # d_c__sum
+        # generator summary
         self.generator_summary = tf.summary.image("generator_summary", self.generator)
-        # G_sum
+
+        # sampler summary
+        self.sampler_summary = tf.summary.image('sampler_summary', self.sampler)
 
         ## Find Accuracy
         # classifcation real_label
@@ -174,9 +176,9 @@ class CAN(object):
 
     def train(self):
         # Creating Optimizer
-        discriminator_optimizer = tf.train.AdamOptimizer(1e-4, beta1=0.6).minimize(self.discriminator_loss,
+        discriminator_optimizer = tf.train.AdamOptimizer(2e-4, beta1=0.5).minimize(self.discriminator_loss,
                                                                                    var_list=self.discriminator_vars)
-        generator_optimizer = tf.train.AdamOptimizer(1e-4, beta1=0.6).minimize(self.generator_loss,
+        generator_optimizer = tf.train.AdamOptimizer(2e-4, beta1=0.5).minimize(self.generator_loss,
                                                                                var_list=self.generator_vars)
 
         #### tensorboard
@@ -283,11 +285,16 @@ class CAN(object):
                 ## image save
                 if np.mod(counter, 300) == 1:
                     try:
-                        samples = self.sess.run(self.sampler, feed_dict={self.random_noise: sample_random_noise,
-                                                                         self.real_image: sample_images,
-                                                                         self.y: sample_labels})
+                        samples, summary = self.sess.run([self.sampler, self.sampler_summary],
+                                                         feed_dict={self.random_noise: sample_random_noise,
+                                                                    self.real_image: sample_images,
+                                                                    self.y: sample_labels})
                         save_images(samples, image_manifold_size(samples.shape[0]),
                                     './{}/train_{:02d}_{:04d}.png'.format('samples', epoch, index))
+
+                        # Writing summary
+                        self.writer.add_summary(summary)
+
                         # print(samples.shape)
                         # save_single_image(samples,
                         #                   './{}/new_sampler_train_{:02d}_{:04d}.png'.format('samples', epoch, index))
@@ -365,7 +372,7 @@ class CAN(object):
 
     ## sampler
     def sampler(self, random_noise):
-        with tf.variable_scope("generator") as scope:
+        with tf.variable_scope("generator", reuse=True) as scope:
             scope.reuse_variables()
 
             sampler_linear = linear(random_noise, 64 * 4 * 4 * 16, 'g_h0_lin')  # ([?, 100], 16,384])
@@ -396,4 +403,4 @@ class CAN(object):
                                       name='g_output')  # (?, 256, 256, 3)
             sampler_output = tf.nn.tanh(sampler_output)  # (?, 256, 256, 3)
 
-        return sampler_output  # (1, 512, 512, 3)
+        return sampler_output  # (?, 256, 256, 3)
