@@ -357,13 +357,11 @@ class CAN(object):
                                         name='g_layer5')  # (?, 128, 128, 64)
             generator_layer5 = tf.nn.relu(batch_norm(generator_layer5, 'g_bn5'))  # (?, 128, 128, 64)
 
-            generator_layer6 = deconv2d(generator_layer5, [self.batch_size, 256, 256, 3],
-                                        name='g_layer6')  # (?, 256, 256, 3)
-            generator_layer6 = tf.nn.relu(batch_norm(generator_layer6, 'g_bn6'))
-            generator_output = deconv2d(generator_layer6, [self.batch_size, 512, 512, 3], name='g_output')
-            generator_output = tf.nn.tanh(generator_output)  # (?, 512, 512, 3)
+            generator_output = deconv2d(generator_layer5, [self.batch_size, 256, 256, 3],
+                                        name='g_output')  # (?, 256, 256, 3)
+            generator_output = tf.nn.tanh(generator_output)  # (?, 256, 256, 3)
 
-            return generator_output  # (?, 512, 512, 3)
+            return generator_output  # (?, 256, 256, 3)
 
     ## sampler
     def sampler(self, random_noise):
@@ -394,13 +392,8 @@ class CAN(object):
                                       name='g_layer5')  # (?, 128, 128, 64)
             sampler_layer5 = tf.nn.relu(batch_norm(sampler_layer5, 'g_bn5', train=False))  # (?, 128, 128, 64)
 
-            sampler_layer6 = deconv2d(sampler_layer5, [self.batch_size, 256, 256, 3],
-                                      name='g_layer6')  # (?, 256, 256, 3)
+            sampler_output = deconv2d(sampler_layer5, [self.batch_size, 256, 256, 3],
+                                      name='g_output')  # (?, 256, 256, 3)
+            sampler_output = tf.nn.tanh(sampler_output)  # (?, 256, 256, 3)
 
-            sampler_layer6 = tf.nn.relu(batch_norm(sampler_layer6, 'g_bn6'))
-            sampler_output = deconv2d(sampler_layer6, [self.batch_size, 512, 512, 3], name='g_output')
-            sampler_output = tf.nn.tanh(sampler_output)  # (?, 512, 512, 3)
-
-            sampler_output = sampler_output[:1, :, :]
-
-            return sampler_output  # (1, 512, 512, 3)
+        return sampler_output  # (1, 512, 512, 3)
