@@ -15,8 +15,8 @@ class CAN(object):
         self.sess = sess
         self.data = glob(os.path.join("./", 'wikiart',
                                       '*.jpg'))
-        self.sample_size = 32
-        self.batch_size = 32
+        self.sample_size = 64
+        self.batch_size = 64
         self.epoch = 100
 
         self.label_dim = 137  # wikiart class num
@@ -114,12 +114,12 @@ class CAN(object):
         # real image discriminator cost
         self.discriminator_police_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
             logits=self.discriminator_police,
-            labels=tf.ones_like(self.discriminator_police_sigmoid)))
+            labels=tf.ones_like(self.discriminator_police_sigmoid) * 0.9))
 
         # fake image discriminator cost
         self.discriminator_thief_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
             logits=self.discriminator_thief,
-            labels=tf.zeros_like(self.discriminator_thief_sigmoid) * 0.9))
+            labels=tf.zeros_like(self.discriminator_thief_sigmoid)))
 
         # real image discriminator classification cost
         self.discriminator_loss_class_real = tf.reduce_mean(tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
