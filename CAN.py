@@ -29,7 +29,7 @@ class CAN(object):
 
         self.sample_dir = 'samples'
         # self.checkpoint_dir = 'drive/My Drive/checkpoint'
-        self.checkpoint_dir = 'drive/My Drive/new_sampler_checkpoint'
+        self.checkpoint_dir = 'drive/My Drive/new_checkpoint'
         self.checkpint_dir_model = 'wikiart'
         self.data_dir = 'data'
 
