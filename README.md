@@ -1,6 +1,6 @@
 # Creative-adversarial-networks
 
-Source code implementation on **CAN** .
+Tensorflow implementation for **CAN** .
 
 **Reference paper** : https://arxiv.org/abs/1706.07068 
 
