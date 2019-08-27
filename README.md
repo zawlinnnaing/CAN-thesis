@@ -1,12 +1,12 @@
 # Creative-adversarial-networks
 
+Source code implementation on **CAN** .
+
+**Reference paper** : https://arxiv.org/abs/1706.07068 
 
 
-참고 논문:
+- Forked from [this repo](https://github.com/KIMSEUNGGYU/AI-Art-Lab)
+- Based on existing [DCGAN in tensorflow](https://github.com/carpedm20/DCGAN-tensorflow)
+- Used Dataset [Wikiart from kaggle](https://www.kaggle.com/c/painter-by-numbers/data)
+- Pre-trained [checkpoint files](https://drive.google.com/open?id=1-7TFfo5lBj9zmjQHSRl_MMy99DxDCh50)
 
-
-tensorflow로 작성되었으면 기존의 DCGAN 모델을 참고하여 만들었습니다. 
-
-DCGAN 모델은 * 
-
-데이터는 wikiart 를 이용하였습니다.
