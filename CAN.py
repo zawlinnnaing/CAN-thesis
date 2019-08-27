@@ -28,13 +28,13 @@ class CAN(object):
         self.label_dim = 137  # wikiart class num
         self.random_noise_dim = 100
 
-        self.input_size = 256
-        self.output_size = 256
+        self.input_size = 512
+        self.output_size = 512
 
         self.sample_dir = 'samples'
 
         # self.checkpoint_dir = 'drive/My Drive/checkpoint'
-        self.checkpoint_dir = 'drive/My Drive/new_checkpoint'
+        self.checkpoint_dir = 'drive/My Drive/high_resolution/new_checkpoint'
 
         self.checkpint_dir_model = 'wikiart'
         self.data_dir = 'data'
@@ -91,7 +91,6 @@ class CAN(object):
             self.real_image, reuse=False)
         self.discriminator_thief_sigmoid, self.discriminator_thief, self.discriminator_thief_class_softmax, self.discriminator_thief_class = self.discriminator(
             self.generator, reuse=True)
-        self.sampler = self.sampler(self.random_noise)
 
         #### tensorboard
 
@@ -111,7 +110,7 @@ class CAN(object):
         self.generator_summary = tf.summary.image("generator_summary", self.generator)
 
         # sampler summary
-        self.sampler_summary = tf.summary.image('sampler_summary', self.sampler)
+        # self.sampler_summary = tf.summary.image('sampler_summary', self.sampler)
 
         ## Find Accuracy
         # classifcation real_label
@@ -324,7 +323,7 @@ class CAN(object):
             if reuse:
                 scope.reuse_variables()  # for reusing variables
             # ! padding -> SAME -> VALID => ops.py
-            discriminator_layer0 = lrelu(conv2d(input_, 32, name='d_h0_conv'))  # [256, 256, 3], 32 => (128, 128, 32)
+            discriminator_layer0 = lrelu(conv2d(input_, 32, name='d_h0_conv'))  # [512, 512, 3], 32 => (128, 128, 32)
             discriminator_layer1 = lrelu(
                 batch_norm(conv2d(discriminator_layer0, 64, name='d_h1_conv'), 'd_bn1'))  # (?, 64, 64, 64)
             discriminator_layer2 = lrelu(
