@@ -40,7 +40,7 @@ class CAN(object):
         self.data_dir = 'data'
 
         # self.tensorboard_dir = 'drive/My Drive/tensorboard/log'
-        self.tensorboard_dir = 'tensorboard/logs'
+        self.tensorboard_dir = 'tensorboard/high_resolution_g_image'
         ## get label(classification) data
         self.csv_file_path = '/content/wikiart/all_data_info.csv'
 
