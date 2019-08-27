@@ -197,21 +197,21 @@ class CAN(object):
         tf.global_variables_initializer().run()
 
         ## Creating sample -> test part
-        sample_random_noise = np.random.normal(0, 1, [self.sample_size, self.random_noise_dim]).astype(np.float32)
+        # sample_random_noise = np.random.normal(0, 1, [self.sample_size, self.random_noise_dim]).astype(np.float32)
 
         # Convert (256,256) images into (256,256,3)
 
         shuffle(self.data)
-        sample_images_path = self.data[0: self.sample_size]
-        sample_images_ = [get_image(sample_image_path,
-                                    input_height=self.input_size,
-                                    input_width=self.input_size,
-                                    resize_height=self.output_size,
-                                    resize_width=self.output_size,
-                                    crop=False) for sample_image_path in sample_images_path]
-
-        sample_images = np.array(sample_images_).astype(np.float32)
-        sample_labels = get_y(sample_images_path, self.label_dim, self.label_dict, self.df)  # get label(classification)
+        # sample_images_path = self.data[0: self.sample_size]
+        # sample_images_ = [get_image(sample_image_path,
+        #                             input_height=self.input_size,
+        #                             input_width=self.input_size,
+        #                             resize_height=self.output_size,
+        #                             resize_width=self.output_size,
+        #                             crop=False) for sample_image_path in sample_images_path]
+        #
+        # sample_images = np.array(sample_images_).astype(np.float32)
+        # sample_labels = get_y(sample_images_path, self.label_dim, self.label_dict, self.df)  # get label(classification)
 
         # checkpoint variable
         counter = 1
@@ -285,10 +285,11 @@ class CAN(object):
                 ## image save
                 if np.mod(counter, 300) == 1:
                     try:
-                        samples, summary = self.sess.run([self.sampler, self.sampler_summary],
-                                                         feed_dict={self.random_noise: sample_random_noise,
-                                                                    self.real_image: sample_images,
-                                                                    self.y: sample_labels})
+                        # samples, summary = self.sess.run([self.sampler, self.sampler_summary],
+                        #                                  feed_dict={self.random_noise: sample_random_noise,
+                        #                                             self.real_image: sample_images,
+                        #                                             self.y: sample_labels})
+                        samples = self.sess.run(self.generator)
                         save_images(samples, image_manifold_size(samples.shape[0]),
                                     './{}/train_{:02d}_{:04d}.png'.format('samples', epoch, index))
 
@@ -371,36 +372,36 @@ class CAN(object):
             return generator_output  # (?, 256, 256, 3)
 
     ## sampler
-    def sampler(self, random_noise):
-        with tf.variable_scope("generator", reuse=True) as scope:
-            scope.reuse_variables()
-
-            sampler_linear = linear(random_noise, 64 * 4 * 4 * 16, 'g_h0_lin')  # ([?, 100], 16,384])
-            sampler_reshape = tf.reshape(sampler_linear, [-1, 4, 4, 64 * 16])  # (?, 4, 4, 1024)
-            sampler_input = tf.nn.relu(batch_norm(sampler_reshape, 'g_bn0', train=False))  # (?, 4, 4, 1024)
-
-            sampler_layer1 = deconv2d(sampler_input, [self.batch_size, 8, 8, 64 * 16],
-                                      name='g_layer1')  # (?, 8, 8, 1024)
-            sampler_layer1 = tf.nn.relu(batch_norm(sampler_layer1, 'g_bn1', train=False))  # (?, 8, 8, 1024)
-
-            sampler_layer2 = deconv2d(sampler_layer1, [self.batch_size, 16, 16, 64 * 8],
-                                      name='g_layer2')  # (?, 16, 16, 512)
-            sampler_layer2 = tf.nn.relu(batch_norm(sampler_layer2, 'g_bn2', train=False))  # (?, 16, 16, 512)
-
-            sampler_layer3 = deconv2d(sampler_layer2, [self.batch_size, 32, 32, 64 * 4],
-                                      name='g_layer3')  # (?, 32, 32, 256)
-            sampler_layer3 = tf.nn.relu(batch_norm(sampler_layer3, 'g_bn3', train=False))  # (?, 32, 32, 256)
-
-            sampler_layer4 = deconv2d(sampler_layer3, [self.batch_size, 64, 64, 64 * 2],
-                                      name='g_layer4')  # (?, 64, 64, 128)
-            sampler_layer4 = tf.nn.relu(batch_norm(sampler_layer4, 'g_bn4', train=False))  # (?, 64, 64, 128)
-
-            sampler_layer5 = deconv2d(sampler_layer4, [self.batch_size, 128, 128, 64],
-                                      name='g_layer5')  # (?, 128, 128, 64)
-            sampler_layer5 = tf.nn.relu(batch_norm(sampler_layer5, 'g_bn5', train=False))  # (?, 128, 128, 64)
-
-            sampler_output = deconv2d(sampler_layer5, [self.batch_size, 256, 256, 3],
-                                      name='g_output')  # (?, 256, 256, 3)
-            sampler_output = tf.nn.tanh(sampler_output)  # (?, 256, 256, 3)
-
-        return sampler_output  # (?, 256, 256, 3)
+    # def sampler(self, random_noise):
+    #     with tf.variable_scope("generator", reuse=True) as scope:
+    #         scope.reuse_variables()
+    #
+    #         sampler_linear = linear(random_noise, 64 * 4 * 4 * 16, 'g_h0_lin')  # ([?, 100], 16,384])
+    #         sampler_reshape = tf.reshape(sampler_linear, [-1, 4, 4, 64 * 16])  # (?, 4, 4, 1024)
+    #         sampler_input = tf.nn.relu(batch_norm(sampler_reshape, 'g_bn0', train=False))  # (?, 4, 4, 1024)
+    #
+    #         sampler_layer1 = deconv2d(sampler_input, [self.batch_size, 8, 8, 64 * 16],
+    #                                   name='g_layer1')  # (?, 8, 8, 1024)
+    #         sampler_layer1 = tf.nn.relu(batch_norm(sampler_layer1, 'g_bn1', train=False))  # (?, 8, 8, 1024)
+    #
+    #         sampler_layer2 = deconv2d(sampler_layer1, [self.batch_size, 16, 16, 64 * 8],
+    #                                   name='g_layer2')  # (?, 16, 16, 512)
+    #         sampler_layer2 = tf.nn.relu(batch_norm(sampler_layer2, 'g_bn2', train=False))  # (?, 16, 16, 512)
+    #
+    #         sampler_layer3 = deconv2d(sampler_layer2, [self.batch_size, 32, 32, 64 * 4],
+    #                                   name='g_layer3')  # (?, 32, 32, 256)
+    #         sampler_layer3 = tf.nn.relu(batch_norm(sampler_layer3, 'g_bn3', train=False))  # (?, 32, 32, 256)
+    #
+    #         sampler_layer4 = deconv2d(sampler_layer3, [self.batch_size, 64, 64, 64 * 2],
+    #                                   name='g_layer4')  # (?, 64, 64, 128)
+    #         sampler_layer4 = tf.nn.relu(batch_norm(sampler_layer4, 'g_bn4', train=False))  # (?, 64, 64, 128)
+    #
+    #         sampler_layer5 = deconv2d(sampler_layer4, [self.batch_size, 128, 128, 64],
+    #                                   name='g_layer5')  # (?, 128, 128, 64)
+    #         sampler_layer5 = tf.nn.relu(batch_norm(sampler_layer5, 'g_bn5', train=False))  # (?, 128, 128, 64)
+    #
+    #         sampler_output = deconv2d(sampler_layer5, [self.batch_size, 256, 256, 3],
+    #                                   name='g_output')  # (?, 256, 256, 3)
+    #         sampler_output = tf.nn.tanh(sampler_output)  # (?, 256, 256, 3)
+    #
+    #     return sampler_output  # (?, 256, 256, 3)
