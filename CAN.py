@@ -303,7 +303,7 @@ class CAN(object):
                         # print(samples.shape)
                         # save_single_image(samples,
                         #                   './{}/new_sampler_train_{:02d}_{:04d}.png'.format('samples', epoch, index))
-                        samples = self.sess.run(self.generator)
+                        samples = self.sess.run(self.generator(self.random_noise))
                         save_images(samples, image_manifold_size(samples.shape[0]),
                                     './{}/train_{:02d}_{:04d}.png'.format('samples', epoch, index))
                         print("[SAVE IMAGE]")
