@@ -19,6 +19,12 @@ class CAN(object):
         self.batch_size = 64
         self.epoch = 100
 
+        self.d_learning_rate = 2e-4
+        self.g_learning_rate = 2e-4
+
+        self.d_decay = 0.6
+        self.g_decay = 0.6
+
         self.label_dim = 137  # wikiart class num
         self.random_noise_dim = 100
 
@@ -176,10 +182,12 @@ class CAN(object):
 
     def train(self):
         # Creating Optimizer
-        discriminator_optimizer = tf.train.AdamOptimizer(2e-4, beta1=0.5).minimize(self.discriminator_loss,
-                                                                                   var_list=self.discriminator_vars)
-        generator_optimizer = tf.train.AdamOptimizer(2e-4, beta1=0.5).minimize(self.generator_loss,
-                                                                               var_list=self.generator_vars)
+        discriminator_optimizer = tf.train.AdamOptimizer(self.d_learning_rate, beta1=self.d_decay).minimize(
+            self.discriminator_loss,
+            var_list=self.discriminator_vars)
+        generator_optimizer = tf.train.AdamOptimizer(self.g_learning_rate, beta1=self.g_decay).minimize(
+            self.generator_loss,
+            var_list=self.generator_vars)
 
         #### tensorboard
         generator_optimizer_summary = tf.summary.merge(
@@ -291,7 +299,9 @@ class CAN(object):
                         #                                             self.y: sample_labels})
                         samples = self.sess.run(self.generator)
                         save_images(samples, image_manifold_size(samples.shape[0]),
-                                    './{}/train_{:02d}_{:04d}.png'.format('samples', epoch, index))
+                                    './{}/lr_{}_decay_{}_train_{:02d}_{:04d}.png'.format('samples',
+                                                                                         self.g_learning_rate,
+                                                                                         self.g_decay, epoch, index))
 
                         # Writing summary
                         self.writer.add_summary(summary)
