@@ -291,9 +291,10 @@ class CAN(object):
                         #                                             self.real_image: sample_images,
                         #                                             self.y: sample_labels})
                         samples = self.sess.run(self.generator(self.random_noise))
-                        save_images(samples, image_manifold_size(samples.shape[0]),
-                                    './{}/train_{:02d}_{:04d}_lr_{}_beta_{}.png'.format('samples', epoch, index,
-                                                                                        self.learning_rate, self.beta1))
+                        save_single_image(samples,
+                                          './{}/train_{:02d}_{:04d}_lr_{}_beta_{}.png'.format('samples', epoch, index,
+                                                                                              self.learning_rate,
+                                                                                              self.beta1))
 
                         # print(samples.shape)
                         # save_single_image(samples,
