@@ -19,28 +19,23 @@ class CAN(object):
         self.batch_size = 64
         self.epoch = 100
 
-        self.d_learning_rate = 2e-4
-        self.g_learning_rate = 2e-4
-
-        self.d_decay = 0.6
-        self.g_decay = 0.6
-
         self.label_dim = 137  # wikiart class num
         self.random_noise_dim = 100
 
-        self.input_size = 512
-        self.output_size = 512
+        self.input_size = 256
+        self.output_size = 256
+
+        self.learning_rate = 2e-4
+        self.beta1 = 0.6
 
         self.sample_dir = 'samples'
-
-        # self.checkpoint_dir = 'drive/My Drive/checkpoint'
-        self.checkpoint_dir = 'drive/My Drive/high_resolution/new_checkpoint'
-
+        self.checkpoint_dir = 'drive/My Drive/checkpoint'
+        # self.checkpoint_dir = 'drive/My Drive/new_sampler_checkpoint'
         self.checkpint_dir_model = 'wikiart'
         self.data_dir = 'data'
 
         # self.tensorboard_dir = 'drive/My Drive/tensorboard/log'
-        self.tensorboard_dir = 'tensorboard/high_resolution_g_image'
+        self.tensorboard_dir = 'drive/My Drive/tensorboard_low_resolution_g_image/log'
         ## get label(classification) data
         self.csv_file_path = '/content/wikiart/all_data_info.csv'
 
@@ -91,7 +86,6 @@ class CAN(object):
             self.real_image, reuse=False)
         self.discriminator_thief_sigmoid, self.discriminator_thief, self.discriminator_thief_class_softmax, self.discriminator_thief_class = self.discriminator(
             self.generator, reuse=True)
-
         #### tensorboard
 
         # discriminator real image summary
@@ -110,7 +104,6 @@ class CAN(object):
         self.generator_summary = tf.summary.image("generator_summary", self.generator)
 
         # sampler summary
-        # self.sampler_summary = tf.summary.image('sampler_summary', self.sampler)
 
         ## Find Accuracy
         # classifcation real_label
@@ -183,12 +176,11 @@ class CAN(object):
 
     def train(self):
         # Creating Optimizer
-        discriminator_optimizer = tf.train.AdamOptimizer(self.d_learning_rate, beta1=self.d_decay).minimize(
+        discriminator_optimizer = tf.train.AdamOptimizer(self.learning_rate, beta1=self.beta1).minimize(
             self.discriminator_loss,
             var_list=self.discriminator_vars)
-        generator_optimizer = tf.train.AdamOptimizer(self.g_learning_rate, beta1=self.g_decay).minimize(
-            self.generator_loss,
-            var_list=self.generator_vars)
+        generator_optimizer = tf.train.AdamOptimizer(self.learning_rate, beta1=self.beta1).minimize(self.generator_loss,
+                                                                                                    var_list=self.generator_vars)
 
         #### tensorboard
         generator_optimizer_summary = tf.summary.merge(
@@ -294,36 +286,34 @@ class CAN(object):
                 ## image save
                 if np.mod(counter, 300) == 1:
                     try:
+                        # samples, summary = self.sess.run([self.sampler, self.sampler_summary],
+                        #                                  feed_dict={self.random_noise: sample_random_noise,
+                        #                                             self.real_image: sample_images,
+                        #                                             self.y: sample_labels})
+                        samples = self.sess.run(self.generator(self.random_noise))
+                        save_images(samples, image_manifold_size(samples.shape[0]),
+                                    './{}/train_{:02d}_{:04d}_lr_{}_beta_{}.png'.format('samples', epoch, index,
+                                                                                        self.learning_rate, self.beta1))
 
-                        # samples = self.sess.run(self.sampler, feed_dict={self.random_noise: sample_random_noise,
-                        #                                                  self.real_image: sample_images,
-                        #                                                  self.y: sample_labels})
-                        # # save_images(samples, image_manifold_size(samples.shape[0]),
-                        # #             './{}/train_{:02d}_{:04d}.png'.format('samples', epoch, index))
                         # print(samples.shape)
                         # save_single_image(samples,
                         #                   './{}/new_sampler_train_{:02d}_{:04d}.png'.format('samples', epoch, index))
-                        samples = self.sess.run(self.generator(self.random_noise))
-                        save_images(samples, image_manifold_size(samples.shape[0]),
-                                    './{}/train_{:02d}_{:04d}.png'.format('samples', epoch, index))
                         print("[SAVE IMAGE]")
                     except Exception as e:
                         print("image save error! ", e)
-                        # checkpoint save
+
+                # checkpoint save
                 if np.mod(counter, 500) == 1:
                     print("[SAVE CHECKPOINT]")
                     checkpoint_save(self.sess, self.saver, checkpoint_dir_path, counter)
-            # TODO:: implement move tensorboard dir to dirve
-            print('{}_epoch ends', format(epoch))
 
     ## discriminator
-
     def discriminator(self, input_, reuse=False):
         with tf.variable_scope("discriminator") as scope:
             if reuse:
                 scope.reuse_variables()  # for reusing variables
             # ! padding -> SAME -> VALID => ops.py
-            discriminator_layer0 = lrelu(conv2d(input_, 32, name='d_h0_conv'))  # [512, 512, 3], 32 => (128, 128, 32)
+            discriminator_layer0 = lrelu(conv2d(input_, 32, name='d_h0_conv'))  # [256, 256, 3], 32 => (128, 128, 32)
             discriminator_layer1 = lrelu(
                 batch_norm(conv2d(discriminator_layer0, 64, name='d_h1_conv'), 'd_bn1'))  # (?, 64, 64, 64)
             discriminator_layer2 = lrelu(
@@ -347,8 +337,7 @@ class CAN(object):
             return tf.nn.sigmoid(
                 discriminator_output), discriminator_output, discriminator_class_output_softmax, discriminator_class_output
 
-        ## generator
-
+    ## generator
     def generator(self, random_noise):
         with tf.variable_scope("generator") as scope:
             generator_linear = linear(random_noise, 64 * 4 * 4 * 16, 'g_h0_lin')  # ([?, 100], 16,384])
@@ -375,51 +364,43 @@ class CAN(object):
                                         name='g_layer5')  # (?, 128, 128, 64)
             generator_layer5 = tf.nn.relu(batch_norm(generator_layer5, 'g_bn5'))  # (?, 128, 128, 64)
 
-            generator_layer6 = deconv2d(generator_layer5, [self.batch_size, 256, 256, 3],
-                                        name='g_layer6')  # (?, 256, 256, 3)
-            generator_layer6 = tf.nn.relu(batch_norm(generator_layer6, 'g_bn6'))
-            generator_output = deconv2d(generator_layer6, [self.batch_size, 512, 512, 3], name='g_output')
-            generator_output = tf.nn.tanh(generator_output)  # (?, 512, 512, 3)
+            generator_output = deconv2d(generator_layer5, [self.batch_size, 256, 256, 3],
+                                        name='g_output')  # (?, 256, 256, 3)
+            generator_output = tf.nn.tanh(generator_output)  # (?, 256, 256, 3)
 
-            return generator_output  # (?, 512, 512, 3)
+            return generator_output  # (?, 256, 256, 3)
 
-## sampler
-# def sampler(self, random_noise):
-
-#     with tf.variable_scope("generator", reuse=True) as scope:
-#         scope.reuse_variables()
-#
-#         sampler_linear = linear(random_noise, 64 * 4 * 4 * 16, 'g_h0_lin')  # ([?, 100], 16,384])
-#         sampler_reshape = tf.reshape(sampler_linear, [-1, 4, 4, 64 * 16])  # (?, 4, 4, 1024)
-#         sampler_input = tf.nn.relu(batch_norm(sampler_reshape, 'g_bn0', train=False))  # (?, 4, 4, 1024)
-#
-#         sampler_layer1 = deconv2d(sampler_input, [self.batch_size, 8, 8, 64 * 16],
-#                                   name='g_layer1')  # (?, 8, 8, 1024)
-#         sampler_layer1 = tf.nn.relu(batch_norm(sampler_layer1, 'g_bn1', train=False))  # (?, 8, 8, 1024)
-#
-#         sampler_layer2 = deconv2d(sampler_layer1, [self.batch_size, 16, 16, 64 * 8],
-#                                   name='g_layer2')  # (?, 16, 16, 512)
-#         sampler_layer2 = tf.nn.relu(batch_norm(sampler_layer2, 'g_bn2', train=False))  # (?, 16, 16, 512)
-#
-#         sampler_layer3 = deconv2d(sampler_layer2, [self.batch_size, 32, 32, 64 * 4],
-#                                   name='g_layer3')  # (?, 32, 32, 256)
-#         sampler_layer3 = tf.nn.relu(batch_norm(sampler_layer3, 'g_bn3', train=False))  # (?, 32, 32, 256)
-#
-#         sampler_layer4 = deconv2d(sampler_layer3, [self.batch_size, 64, 64, 64 * 2],
-#                                   name='g_layer4')  # (?, 64, 64, 128)
-#         sampler_layer4 = tf.nn.relu(batch_norm(sampler_layer4, 'g_bn4', train=False))  # (?, 64, 64, 128)
-#
-#         sampler_layer5 = deconv2d(sampler_layer4, [self.batch_size, 128, 128, 64],
-#                                   name='g_layer5')  # (?, 128, 128, 64)
-#         sampler_layer5 = tf.nn.relu(batch_norm(sampler_layer5, 'g_bn5', train=False))  # (?, 128, 128, 64)
-#
-#         sampler_layer6 = deconv2d(sampler_layer5, [self.batch_size, 256, 256, 3],
-#                                   name='g_layer6')  # (?, 256, 256, 3)
-#
-#         sampler_layer6 = tf.nn.relu(batch_norm(sampler_layer6, 'g_bn6'))
-#         sampler_output = deconv2d(sampler_layer6, [self.batch_size, 512, 512, 3], name='g_output')
-#         sampler_output = tf.nn.tanh(sampler_output)  # (?, 512, 512, 3)
-#
-#         sampler_output = sampler_output[:1, :, :]
-#
-#         return sampler_output  # (1, 512, 512, 3)
+    ## sampler
+    # def sampler(self, random_noise):
+    #     with tf.variable_scope("generator", reuse=True) as scope:
+    #         scope.reuse_variables()
+    #
+    #         sampler_linear = linear(random_noise, 64 * 4 * 4 * 16, 'g_h0_lin')  # ([?, 100], 16,384])
+    #         sampler_reshape = tf.reshape(sampler_linear, [-1, 4, 4, 64 * 16])  # (?, 4, 4, 1024)
+    #         sampler_input = tf.nn.relu(batch_norm(sampler_reshape, 'g_bn0', train=False))  # (?, 4, 4, 1024)
+    #
+    #         sampler_layer1 = deconv2d(sampler_input, [self.batch_size, 8, 8, 64 * 16],
+    #                                   name='g_layer1')  # (?, 8, 8, 1024)
+    #         sampler_layer1 = tf.nn.relu(batch_norm(sampler_layer1, 'g_bn1', train=False))  # (?, 8, 8, 1024)
+    #
+    #         sampler_layer2 = deconv2d(sampler_layer1, [self.batch_size, 16, 16, 64 * 8],
+    #                                   name='g_layer2')  # (?, 16, 16, 512)
+    #         sampler_layer2 = tf.nn.relu(batch_norm(sampler_layer2, 'g_bn2', train=False))  # (?, 16, 16, 512)
+    #
+    #         sampler_layer3 = deconv2d(sampler_layer2, [self.batch_size, 32, 32, 64 * 4],
+    #                                   name='g_layer3')  # (?, 32, 32, 256)
+    #         sampler_layer3 = tf.nn.relu(batch_norm(sampler_layer3, 'g_bn3', train=False))  # (?, 32, 32, 256)
+    #
+    #         sampler_layer4 = deconv2d(sampler_layer3, [self.batch_size, 64, 64, 64 * 2],
+    #                                   name='g_layer4')  # (?, 64, 64, 128)
+    #         sampler_layer4 = tf.nn.relu(batch_norm(sampler_layer4, 'g_bn4', train=False))  # (?, 64, 64, 128)
+    #
+    #         sampler_layer5 = deconv2d(sampler_layer4, [self.batch_size, 128, 128, 64],
+    #                                   name='g_layer5')  # (?, 128, 128, 64)
+    #         sampler_layer5 = tf.nn.relu(batch_norm(sampler_layer5, 'g_bn5', train=False))  # (?, 128, 128, 64)
+    #
+    #         sampler_output = deconv2d(sampler_layer5, [self.batch_size, 256, 256, 3],
+    #                                   name='g_output')  # (?, 256, 256, 3)
+    #         sampler_output = tf.nn.tanh(sampler_output)  # (?, 256, 256, 3)
+    #
+    #     return sampler_output  # (?, 256, 256, 3)
