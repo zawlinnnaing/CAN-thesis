@@ -24,12 +24,11 @@ def main(_):
         latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
         saver = tf.train.Saver()
         saver.restore(sess, latest_checkpoint)
-        for i in range(10):
-            random_noise = np.random.normal(0, 1, [batch_size, noise_dim]).astype(np.float32)
-            _, summary = sess.run([g_model, generator_summary], feed_dict={
-                tf_random_noise: random_noise
-            })
-            writer.add_summary(summary)
+        random_noise = np.random.normal(0, 1, [batch_size, noise_dim]).astype(np.float32)
+        _, summary = sess.run([g_model, generator_summary], feed_dict={
+            tf_random_noise: random_noise
+        })
+        writer.add_summary(summary)
 
 
 if __name__ == '__main__':
