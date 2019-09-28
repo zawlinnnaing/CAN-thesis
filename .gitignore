@@ -1,1 +1,6 @@
 .idea/*
+checkpoint/*
+data/*
+tensorboard/*
+
+__pycache__/*

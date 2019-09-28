@@ -6,6 +6,8 @@ import re
 from glob import glob
 import pandas
 
+import ops
+import utils
 from six.moves import xrange
 from random import shuffle
 
@@ -28,44 +30,45 @@ class CAN(object):
         self.learning_rate = 2e-4
         self.beta1 = 0.6
 
-        self.sample_dir = 'samples'
-        self.checkpoint_dir = 'drive/My Drive/checkpoint'
-        # self.checkpoint_dir = 'drive/My Drive/new_sampler_checkpoint'
+        # self.sample_dir = 'samples'
+        # # self.checkpoint_dir = 'drive/My Drive/checkpoint'
+        self.checkpoint_dir = 'checkpoint'
+        # # self.checkpoint_dir = 'drive/My Drive/new_sampler_checkpoint'
         self.checkpint_dir_model = 'wikiart'
         self.data_dir = 'data'
-
-        # self.tensorboard_dir = 'drive/My Drive/tensorboard/log'
+        #
+        # # self.tensorboard_dir = 'drive/My Drive/tensorboard/log'
         self.tensorboard_dir = 'drive/My Drive/tensorboard_low_resolution_g_image/log'
-        ## get label(classification) data
-        self.csv_file_path = '/content/wikiart/all_data_info.csv'
-
-        self.df = pandas.read_csv(self.csv_file_path)
-        self.label_dict = self.df['style'].unique()
-        self.label_dict = dict(enumerate(self.label_dict))
-
-        self.label_dict = dict((v, k) for k, v in self.label_dict.items())
-
-        print(self.label_dict)
-
-        ## Check required directory and make directory
-        if not os.path.exists(self.checkpoint_dir):
-            print('NO checkpoint directory => Making checkpoint directory')
-            print('\nMake directory in drive first')
-            os.makedirs(self.checkpoint_dir)
-
-        if not os.path.exists(self.sample_dir):
-            print('NO sample directory => Making sample directory')
-            os.makedirs(self.sample_dir)
-
-        if not os.path.exists(self.tensorboard_dir):
-            print('No tensorboard summary directory => Making directory')
-            os.makedirs(self.tensorboard_dir)
-
-        if not os.path.exists(self.data_dir) or not self.data:
-            # print(self.data)
-            print('\nPROCESS END')
-            print('WARNING: No data directory or No image data')
-            sys.exit(1)
+        # ## get label(classification) data
+        # # self.csv_file_path = '/content/wikiart/all_data_info.csv'
+        # self.csv_file_path = 'data/wikiart/all_data_info.csv'
+        # self.df = pandas.read_csv(self.csv_file_path)
+        # self.label_dict = self.df['style'].unique()
+        # self.label_dict = dict(enumerate(self.label_dict))
+        #
+        # self.label_dict = dict((v, k) for k, v in self.label_dict.items())
+        #
+        # print(self.label_dict)
+        #
+        # ## Check required directory and make directory
+        # if not os.path.exists(self.checkpoint_dir):
+        #     print('NO checkpoint directory => Making checkpoint directory')
+        #     print('\nMake directory in drive first')
+        #     os.makedirs(self.checkpoint_dir)
+        #
+        # if not os.path.exists(self.sample_dir):
+        #     print('NO sample directory => Making sample directory')
+        #     os.makedirs(self.sample_dir)
+        #
+        # if not os.path.exists(self.tensorboard_dir):
+        #     print('No tensorboard summary directory => Making directory')
+        #     os.makedirs(self.tensorboard_dir)
+        #
+        # if not os.path.exists(self.data_dir) or not self.data:
+        #     # print(self.data)
+        #     print('\nPROCESS END')
+        #     print('WARNING: No data directory or No image data')
+        #     # sys.exit(1)
 
     def build_model(self):
         ## Creating a variable
@@ -80,12 +83,12 @@ class CAN(object):
 
         ##  Building model
         # Creating generator / discriminator
-        self.generator = self.generator(self.random_noise)
+        self.generator_model = self.generator(self.random_noise)
 
         self.discriminator_police_sigmoid, self.discriminator_police, self.discriminator_police_class_softmax, self.discriminator_police_class = self.discriminator(
             self.real_image, reuse=False)
         self.discriminator_thief_sigmoid, self.discriminator_thief, self.discriminator_thief_class_softmax, self.discriminator_thief_class = self.discriminator(
-            self.generator, reuse=True)
+            self.generator_model, reuse=True)
         #### tensorboard
 
         # discriminator real image summary
@@ -101,7 +104,7 @@ class CAN(object):
         self.discriminator_thief_class_summary = tf.summary.histogram("discriminator_thief_class_summary",
                                                                       self.discriminator_thief_class_softmax)
         # generator summary
-        self.generator_summary = tf.summary.image("generator_summary", self.generator)
+        self.generator_summary = tf.summary.image("generator_summary", self.generator_model)
 
         # sampler summary
 
@@ -219,8 +222,8 @@ class CAN(object):
 
         # checkpoint load
         checkpoint_dir_path = os.path.join(self.checkpoint_dir, self.checkpint_dir_model)
-        could_load, checkpoint_counter = checkpoint_load(self.sess, self.saver, self.checkpoint_dir,
-                                                         self.checkpint_dir_model)
+        could_load, checkpoint_counter = ops.checkpoint_load(self.sess, self.saver, self.checkpoint_dir,
+                                                             self.checkpint_dir_model)
         if could_load:
             counter = checkpoint_counter
             print(" [*] Load SUCCESS")
@@ -236,17 +239,17 @@ class CAN(object):
             for index in xrange(0, batch_index):
                 ## Creating batch -> training part
                 batch_images_path = self.data[index * self.batch_size: (index + 1) * self.batch_size]
-                batch_images_ = [get_image(batch_image_path,
-                                           input_height=self.input_size,
-                                           input_width=self.input_size,
-                                           resize_height=self.output_size,
-                                           resize_width=self.output_size,
-                                           crop=False) for batch_image_path in batch_images_path]
+                batch_images_ = [utils.get_image(batch_image_path,
+                                                 input_height=self.input_size,
+                                                 input_width=self.input_size,
+                                                 resize_height=self.output_size,
+                                                 resize_width=self.output_size,
+                                                 crop=False) for batch_image_path in batch_images_path]
 
                 batch_images = np.array(batch_images_).astype(np.float32)
 
-                batch_labels = get_y(batch_images_path, self.label_dim, self.label_dict,
-                                     self.df)  # get label(classification)
+                batch_labels = ops.get_y(batch_images_path, self.label_dim, self.label_dict,
+                                         self.df)  # get label(classification)
                 batch_random_noise = np.random.normal(0, 1, [self.batch_size, self.random_noise_dim]).astype(np.float32)
 
                 ## Update
@@ -290,11 +293,11 @@ class CAN(object):
                         #                                  feed_dict={self.random_noise: sample_random_noise,
                         #                                             self.real_image: sample_images,
                         #                                             self.y: sample_labels})
-                        samples = self.sess.run(self.generator(self.random_noise))
-                        save_single_image(samples,
-                                          './{}/train_{:02d}_{:04d}_lr_{}_beta_{}.png'.format('samples', epoch, index,
-                                                                                              self.learning_rate,
-                                                                                              self.beta1))
+                        samples = self.sess.run(self.generator_model(self.random_noise))
+                        # save_single_image(samples,
+                        #                   './{}/train_{:02d}_{:04d}_lr_{}_beta_{}.png'.format('samples', epoch, index,
+                        #                                                                       self.learning_rate,
+                        #                                                                       self.beta1))
 
                         # print(samples.shape)
                         # save_single_image(samples,
@@ -306,7 +309,7 @@ class CAN(object):
                 # checkpoint save
                 if np.mod(counter, 500) == 1:
                     print("[SAVE CHECKPOINT]")
-                    checkpoint_save(self.sess, self.saver, checkpoint_dir_path, counter)
+                    ops.checkpoint_save(self.sess, self.saver, checkpoint_dir_path, counter)
 
     ## discriminator
     def discriminator(self, input_, reuse=False):
@@ -314,25 +317,26 @@ class CAN(object):
             if reuse:
                 scope.reuse_variables()  # for reusing variables
             # ! padding -> SAME -> VALID => ops.py
-            discriminator_layer0 = lrelu(conv2d(input_, 32, name='d_h0_conv'))  # [256, 256, 3], 32 => (128, 128, 32)
-            discriminator_layer1 = lrelu(
-                batch_norm(conv2d(discriminator_layer0, 64, name='d_h1_conv'), 'd_bn1'))  # (?, 64, 64, 64)
-            discriminator_layer2 = lrelu(
-                batch_norm(conv2d(discriminator_layer1, 128, name='d_h2_conv'), 'd_bn2'))  # (?, 32, 32, 128)
-            discriminator_layer3 = lrelu(
-                batch_norm(conv2d(discriminator_layer2, 256, name='d_h3_conv'), 'd_bn3'))  # (?, 16, 16, 256)
-            discriminator_layer4 = lrelu(
-                batch_norm(conv2d(discriminator_layer3, 512, name='d_h4_conv'), 'd_bn4'))  # (?, 8, 8, 512)
-            discriminator_layer5 = lrelu(
-                batch_norm(conv2d(discriminator_layer4, 512, name='d_h5_conv'), 'd_bn5'))  # (?, 4, 4, 512)
+            discriminator_layer0 = ops.lrelu(
+                ops.conv2d(input_, 32, name='d_h0_conv'))  # [256, 256, 3], 32 => (128, 128, 32)
+            discriminator_layer1 = ops.lrelu(
+                ops.batch_norm(ops.conv2d(discriminator_layer0, 64, name='d_h1_conv'), 'd_bn1'))  # (?, 64, 64, 64)
+            discriminator_layer2 = ops.lrelu(
+                ops.batch_norm(ops.conv2d(discriminator_layer1, 128, name='d_h2_conv'), 'd_bn2'))  # (?, 32, 32, 128)
+            discriminator_layer3 = ops.lrelu(
+                ops.batch_norm(ops.conv2d(discriminator_layer2, 256, name='d_h3_conv'), 'd_bn3'))  # (?, 16, 16, 256)
+            discriminator_layer4 = ops.lrelu(
+                ops.batch_norm(ops.conv2d(discriminator_layer3, 512, name='d_h4_conv'), 'd_bn4'))  # (?, 8, 8, 512)
+            discriminator_layer5 = ops.lrelu(
+                ops.batch_norm(ops.conv2d(discriminator_layer4, 512, name='d_h5_conv'), 'd_bn5'))  # (?, 4, 4, 512)
 
             shape = np.product(discriminator_layer5.get_shape()[1:].as_list())  #
             discriminator_layer6 = tf.reshape(discriminator_layer5, [-1, shape])  #
-            discriminator_output = linear(discriminator_layer6, 1, 'd_ro_lin')  # (?, 1)
+            discriminator_output = ops.linear(discriminator_layer6, 1, 'd_ro_lin')  # (?, 1)
 
-            discriminator_layer7 = lrelu(linear(discriminator_layer6, 1024, 'd_h8_lin'))  #
-            discriminator_layer8 = lrelu(linear(discriminator_layer7, 512, 'd_h9_lin'))  #
-            discriminator_class_output = linear(discriminator_layer8, self.label_dim, 'd_co_lin')  #
+            discriminator_layer7 = ops.lrelu(ops.linear(discriminator_layer6, 1024, 'd_h8_lin'))  #
+            discriminator_layer8 = ops.lrelu(ops.linear(discriminator_layer7, 512, 'd_h9_lin'))  #
+            discriminator_class_output = ops.linear(discriminator_layer8, self.label_dim, 'd_co_lin')  #
             discriminator_class_output_softmax = tf.nn.softmax(discriminator_class_output)  # (?, self.label_dim)
 
             return tf.nn.sigmoid(
@@ -341,36 +345,53 @@ class CAN(object):
     ## generator
     def generator(self, random_noise):
         with tf.variable_scope("generator") as scope:
-            generator_linear = linear(random_noise, 64 * 4 * 4 * 16, 'g_h0_lin')  # ([?, 100], 16,384])
+            generator_linear = ops.linear(random_noise, 64 * 4 * 4 * 16, 'g_h0_lin')  # ([?, 100], 16,384])
             generator_reshape = tf.reshape(generator_linear, [-1, 4, 4, 64 * 16])  # (?, 4, 4, 1024)
-            generator_input = tf.nn.relu(batch_norm(generator_reshape, 'g_bn0'))  # (?, 4, 4, 1024)
+            generator_input = tf.nn.relu(ops.batch_norm(generator_reshape, 'g_bn0'))  # (?, 4, 4, 1024)
 
-            generator_layer1 = deconv2d(generator_input, [self.batch_size, 8, 8, 64 * 16],
-                                        name='g_layer1')  # (?, 8, 8, 1024)
-            generator_layer1 = tf.nn.relu(batch_norm(generator_layer1, 'g_bn1'))  # (?, 8, 8, 1024)
+            generator_layer1 = ops.deconv2d(generator_input, [self.batch_size, 8, 8, 64 * 16],
+                                            name='g_layer1')  # (?, 8, 8, 1024)
+            generator_layer1 = tf.nn.relu(ops.batch_norm(generator_layer1, 'g_bn1'))  # (?, 8, 8, 1024)
 
-            generator_layer2 = deconv2d(generator_layer1, [self.batch_size, 16, 16, 64 * 8],
-                                        name='g_layer2')  # (?, 16, 16, 512)
-            generator_layer2 = tf.nn.relu(batch_norm(generator_layer2, 'g_bn2'))  # (?, 16, 16, 512)
+            generator_layer2 = ops.deconv2d(generator_layer1, [self.batch_size, 16, 16, 64 * 8],
+                                            name='g_layer2')  # (?, 16, 16, 512)
+            generator_layer2 = tf.nn.relu(ops.batch_norm(generator_layer2, 'g_bn2'))  # (?, 16, 16, 512)
 
-            generator_layer3 = deconv2d(generator_layer2, [self.batch_size, 32, 32, 64 * 4],
-                                        name='g_layer3')  # (?, 32, 32, 256)
-            generator_layer3 = tf.nn.relu(batch_norm(generator_layer3, 'g_bn3'))  # (?, 32, 32, 256)
+            generator_layer3 = ops.deconv2d(generator_layer2, [self.batch_size, 32, 32, 64 * 4],
+                                            name='g_layer3')  # (?, 32, 32, 256)
+            generator_layer3 = tf.nn.relu(ops.batch_norm(generator_layer3, 'g_bn3'))  # (?, 32, 32, 256)
 
-            generator_layer4 = deconv2d(generator_layer3, [self.batch_size, 64, 64, 64 * 2],
-                                        name='g_layer4')  # (?, 64, 64, 128)
-            generator_layer4 = tf.nn.relu(batch_norm(generator_layer4, 'g_bn4'))  # (?, 64, 64, 128)
+            generator_layer4 = ops.deconv2d(generator_layer3, [self.batch_size, 64, 64, 64 * 2],
+                                            name='g_layer4')  # (?, 64, 64, 128)
+            generator_layer4 = tf.nn.relu(ops.batch_norm(generator_layer4, 'g_bn4'))  # (?, 64, 64, 128)
 
-            generator_layer5 = deconv2d(generator_layer4, [self.batch_size, 128, 128, 64],
-                                        name='g_layer5')  # (?, 128, 128, 64)
-            generator_layer5 = tf.nn.relu(batch_norm(generator_layer5, 'g_bn5'))  # (?, 128, 128, 64)
+            generator_layer5 = ops.deconv2d(generator_layer4, [self.batch_size, 128, 128, 64],
+                                            name='g_layer5')  # (?, 128, 128, 64)
+            generator_layer5 = tf.nn.relu(ops.batch_norm(generator_layer5, 'g_bn5'))  # (?, 128, 128, 64)
 
-            generator_output = deconv2d(generator_layer5, [self.batch_size, 256, 256, 3],
-                                        name='g_output')  # (?, 256, 256, 3)
+            generator_output = ops.deconv2d(generator_layer5, [self.batch_size, 256, 256, 3],
+                                            name='g_output')  # (?, 256, 256, 3)
             generator_output = tf.nn.tanh(generator_output)  # (?, 256, 256, 3)
 
             return generator_output  # (?, 256, 256, 3)
 
+    def sample(self):
+        saver = tf.train.Saver()
+        checkpoint_dir = os.path.join(self.checkpint_dir, self.checkpint_dir_model)
+        saver.restore(self.sess, checkpoint_dir)
+        # could_load, checkpoint_counter = ops.checkpoint_load(self.sess, self.saver, self.checkpoint_dir,
+        #                                                      self.checkpint_dir_model)
+        # if could_load:
+        #     counter = checkpoint_counter
+        #     print(" [*] Load SUCCESS")
+        # else:
+        #     print(" [!] Load failed...")
+        random_noise = np.random.normal(0, 1, [self.batch_size, self.random_noise_dim]).astype(np.float32)
+        g_image = self.generator(self.random_noise)
+        # tf.global_variables_initializer().run()
+        self.sess.run(g_image, feed_dict={
+            random_noise: random_noise
+        })
     ## sampler
     # def sampler(self, random_noise):
     #     with tf.variable_scope("generator", reuse=True) as scope:
@@ -378,7 +399,7 @@ class CAN(object):
     #
     #         sampler_linear = linear(random_noise, 64 * 4 * 4 * 16, 'g_h0_lin')  # ([?, 100], 16,384])
     #         sampler_reshape = tf.reshape(sampler_linear, [-1, 4, 4, 64 * 16])  # (?, 4, 4, 1024)
-    #         sampler_input = tf.nn.relu(batch_norm(sampler_reshape, 'g_bn0', train=False))  # (?, 4, 4, 1024)
+    #         sampler_input = tf.nn.relu(ops.batch_norm(sampler_reshape, 'g_bn0', train=False))  # (?, 4, 4, 1024)
     #
     #         sampler_layer1 = deconv2d(sampler_input, [self.batch_size, 8, 8, 64 * 16],
     #                                   name='g_layer1')  # (?, 8, 8, 1024)
