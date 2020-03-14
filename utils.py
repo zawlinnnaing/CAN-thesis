@@ -1,6 +1,6 @@
 import numpy as np
 from PIL import Image
-from IPython.display import display
+# from IPython.display import display
 
 
 ############ get image ##################

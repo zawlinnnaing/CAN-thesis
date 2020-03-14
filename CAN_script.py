@@ -33,11 +33,11 @@ checkpoint_dir = 'checkpoint'
 checkpint_dir_model = 'wikiart'
 data_dir = 'data'
 
-real_image = tf.placeholder(tf.float32, [batch_size, 256, 256, 3],
+real_image = tf.compat.v1.placeholder(tf.float32, [batch_size, 256, 256, 3],
                             name='real_images')
-random_noise = tf.placeholder(tf.float32, [None, random_noise_dim], name='random_noise')
+random_noise = tf.compat.v1.placeholder(tf.float32, [None, random_noise_dim], name='random_noise')
 
-y = tf.placeholder(tf.float32, [None, 27], name='y')
+y = tf.compat.v1.placeholder(tf.float32, [None, 27], name='y')
 
 # TODO:: modify this to suit new dataset from kaggle
 
@@ -78,7 +78,7 @@ class Model(object):
 # discriminator
 
 def discriminator(input_, reuse=False):
-    with tf.variable_scope("discriminator") as scope:
+    with tf.compat.v1.variable_scope("discriminator") as scope:
         if reuse:
             scope.reuse_variables()  # when you share data
         # ! padding -> SAME -> VALID => ops.py (in file)
@@ -110,7 +110,7 @@ def discriminator(input_, reuse=False):
 # generator
 
 def generator(random_noise):
-    with tf.variable_scope("generator") as scope:
+    with tf.compat.v1.variable_scope("generator") as scope:
         generator_linear = linear(random_noise, 64 * 4 * 4 * 16, 'g_h0_lin')  # ([?, 100], 16,384])
         generator_reshape = tf.reshape(generator_linear, [-1, 4, 4, 64 * 16])  # (?, 4, 4, 1024)
         generator_input = tf.nn.relu(batch_norm(generator_reshape, 'g_bn0'))  # (?, 4, 4, 1024)
@@ -145,7 +145,7 @@ def generator(random_noise):
 ## sampler
 
 def sampler(random_noise):
-    with tf.variable_scope("generator", reuse=tf.AUTO_REUSE) as scope:
+    with tf.compat.v1.variable_scope("generator", reuse=tf.compat.v1.AUTO_REUSE) as scope:
         scope.reuse_variables()
 
         sampler_linear = linear(random_noise, 64 * 4 * 4 * 16, 'g_h0_lin')  # ([?, 100], 16,384])
@@ -190,7 +190,7 @@ def build_model():
     # (?,256,256,3)
 
     # tensorboard
-    model.random_noise_summary = tf.summary.histogram("random_noise_summary", random_noise)
+    model.random_noise_summary = tf.compat.v1.summary.histogram("random_noise_summary", random_noise)
     # z_sum
 
     #  build model
@@ -207,53 +207,53 @@ def build_model():
     model.sampler = sampler(random_noise)
 
     #### tensorboard
-    model.discriminator_police_summary = tf.summary.histogram("discriminator_police_summary",
+    model.discriminator_police_summary = tf.compat.v1.summary.histogram("discriminator_police_summary",
                                                               discriminator_police_sigmoid)
     # d_sum
 
-    model.discriminator_police_class_summary = tf.summary.histogram("discriminator_police_class_summary",
+    model.discriminator_police_class_summary = tf.compat.v1.summary.histogram("discriminator_police_class_summary",
                                                                     discriminator_police_class_softmax)
     # d_c_sum
 
-    model.discriminator_thief_summary = tf.summary.histogram("discriminator_thief_summary",
+    model.discriminator_thief_summary = tf.compat.v1.summary.histogram("discriminator_thief_summary",
                                                              discriminator_thief_sigmoid)
     # d__sum
-    model.discriminator_thief_class_summary = tf.summary.histogram("discriminator_thief_class_summary",
+    model.discriminator_thief_class_summary = tf.compat.v1.summary.histogram("discriminator_thief_class_summary",
                                                                    discriminator_thief_class_softmax)
     # d_c__sum
-    model.generator_summary = tf.summary.image("generator_summary", generator)
+    model.generator_summary = tf.compat.v1.summary.image("generator_summary", generator)
     # G_sum
 
     ## Find Accuracy
     # classification real_label and real discriminator labels
-    correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(discriminator_police_class, 1))
-    model.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    correct_prediction = tf.equal(tf.argmax(input=y, axis=1), tf.argmax(input=discriminator_police_class, axis=1))
+    model.accuracy = tf.reduce_mean(input_tensor=tf.cast(correct_prediction, tf.float32))
 
     # Creating loss function - Find cost
     # real discriminator cost
-    model.discriminator_police_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+    model.discriminator_police_loss = tf.reduce_mean(input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(
         logits=discriminator_police,
         labels=tf.ones_like(discriminator_police_sigmoid)))
 
     # fake discriminator cost
-    model.discriminator_thief_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+    model.discriminator_thief_loss = tf.reduce_mean(input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(
         logits=discriminator_thief,
         labels=tf.ones_like(discriminator_thief_sigmoid)))
 
     # style classification_discriminator cost
-    model.discriminator_loss_class_real = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+    model.discriminator_loss_class_real = tf.reduce_mean(input_tensor=tf.nn.softmax_cross_entropy_with_logits(
         logits=discriminator_police_class,
         labels=1.0 * y))
 
     # generator style classification cost
-    model.generator_loss_class_fake = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+    model.generator_loss_class_fake = tf.reduce_mean(input_tensor=tf.nn.softmax_cross_entropy_with_logits(
         logits=discriminator_thief_class,
         labels=(1.0 / 27) *
                tf.ones_like(discriminator_thief_class_softmax)))
 
     # generator cost
     generator_loss_fake = tf.reduce_mean(
-        tf.nn.sigmoid_cross_entropy_with_logits(logits=discriminator_thief,
+        input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(logits=discriminator_thief,
                                                 labels=tf.ones_like(discriminator_thief_sigmoid)))
 
     # generator, discriminator  total loss
@@ -261,54 +261,54 @@ def build_model():
     model.discriminator_loss = model.discriminator_police_loss + model.discriminator_thief_loss + model.discriminator_loss_class_real  # 1 + 0 + 1 = 2
 
     ''' Tensorboard '''
-    model.discriminator_police_loss_summary = tf.summary.scalar("discriminator_police_loss_summary",
+    model.discriminator_police_loss_summary = tf.compat.v1.summary.scalar("discriminator_police_loss_summary",
                                                                 model.discriminator_police_loss)
     # d_loss_real_sum
 
-    model.discriminator_thief_loss_summary = tf.summary.scalar("discriminator_thief_loss_summary",
+    model.discriminator_thief_loss_summary = tf.compat.v1.summary.scalar("discriminator_thief_loss_summary",
                                                                model.discriminator_thief_loss)
     # d_loss_fake_sum
 
-    model.discriminator_police_class_loss_summary = tf.summary.scalar("discriminator_police_class_loss",
+    model.discriminator_police_class_loss_summary = tf.compat.v1.summary.scalar("discriminator_police_class_loss",
                                                                       model.discriminator_loss_class_real)
     # d_loss_class_real_sum
-    model.generator_loss_class_fake_summary = tf.summary.scalar("generator_loss_class_fake",
+    model.generator_loss_class_fake_summary = tf.compat.v1.summary.scalar("generator_loss_class_fake",
                                                                 model.generator_loss_class_fake)
     # g_loss_class_fake_sum
 
-    model.generator_loss_summary = tf.summary.scalar("generator_loss_summary", model.generator_loss)
+    model.generator_loss_summary = tf.compat.v1.summary.scalar("generator_loss_summary", model.generator_loss)
     # g_loss_sum
-    model.discriminator_loss_summary = tf.summary.scalar("discriminator_loss_summary", model.discriminator_loss)
+    model.discriminator_loss_summary = tf.compat.v1.summary.scalar("discriminator_loss_summary", model.discriminator_loss)
     # d_loss_sum
 
-    t_vars = tf.trainable_variables()
+    t_vars = tf.compat.v1.trainable_variables()
     model.discriminator_vars = [var for var in t_vars if 'd_' in var.name]
     model.generator_vars = [var for var in t_vars if 'g_' in var.name]
     # Creating checkpoint saver
-    model.saver = tf.train.Saver()
+    model.saver = tf.compat.v1.train.Saver()
 
     return model
 
 
 def train(model, epoch, sess):
     # Creating Optimizer
-    discriminator_optimizer = tf.train.AdamOptimizer(0.0002, beta1=0.5).minimize(model.discriminator_loss,
+    discriminator_optimizer = tf.compat.v1.train.AdamOptimizer(0.0002, beta1=0.5).minimize(model.discriminator_loss,
                                                                                  var_list=model.discriminator_vars)
-    generator_optimizer = tf.train.AdamOptimizer(0.0002, beta1=0.5).minimize(model.generator_loss,
+    generator_optimizer = tf.compat.v1.train.AdamOptimizer(0.0002, beta1=0.5).minimize(model.generator_loss,
                                                                              var_list=model.generator_vars)
 
     #### tensorboard
-    generator_optimizer_summary = tf.summary.merge(
+    generator_optimizer_summary = tf.compat.v1.summary.merge(
         [model.random_noise_summary, model.discriminator_thief_summary, model.generator_summary,
          model.discriminator_thief_loss_summary, model.generator_loss_summary])
 
-    discriminator_optimizer_summary = tf.summary.merge(
+    discriminator_optimizer_summary = tf.compat.v1.summary.merge(
         [model.random_noise_summary, model.discriminator_police_summary,
          model.discriminator_police_loss_summary, model.discriminator_loss_summary,
          model.discriminator_police_class_loss_summary, model.generator_loss_class_fake_summary])
     writer = tf.summary.FileWriter("./logs", sess.graph)
 
-    tf.global_variables_initializer().run()
+    tf.compat.v1.global_variables_initializer().run()
 
     ## Creating sample -> test part
     sample_random_noise = np.random.normal(0, 1, [sample_size, random_noise_dim]).astype(np.float32)
@@ -407,9 +407,9 @@ def train(model, epoch, sess):
                 checkpoint_save(sess, model.saver, checkpoint_dir_path, counter)
 
 
-run_config = tf.ConfigProto()
+run_config = tf.compat.v1.ConfigProto()
 run_config.gpu_options.allow_growth = True
 
-with tf.Session(config=run_config) as sess:
+with tf.compat.v1.Session(config=run_config) as sess:
     model = build_model()
     train(model, epoch, sess)
