@@ -8,7 +8,7 @@
 
 
 import tensorflow as tf
-from DCGAN import *
+# from DCGAN import *
 from CAN import CAN
 
 

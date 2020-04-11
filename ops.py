@@ -1,6 +1,7 @@
 import os
 import tensorflow as tf
 import re
+import numpy as np
 
 
 def batch_norm(inputs, scope_name, train=True):
