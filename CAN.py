@@ -32,7 +32,8 @@ class CAN(object):
         self.sample_dir = 'samples'
         self.checkpoint_dir = 'checkpoint'
         # self.checkpoint_dir = 'drive/My Drive/new_sampler_checkpoint'
-        self.checkpint_dir_model = 'wikiart'
+        # self.checkpint_dir_model = 'wikiart'
+        self.checkpint_dir_model = "wikiart"
         self.data_dir = 'data'
 
         # self.tensorboard_dir = 'drive/My Drive/tensorboard/log'
@@ -93,17 +94,17 @@ class CAN(object):
         # tensorboard
 
         # discriminator real image summary
-        self.discriminator_police_summary = tf.summary.histogram("discriminator_police_summary",
-                                                                 self.discriminator_police_sigmoid)
+        self.discriminator_police_summary = tf.compat.v1.summary.histogram("discriminator_police_summary",
+                                                                           self.discriminator_police_sigmoid)
         # discriminator real image class summary
-        self.discriminator_police_class_summary = tf.summary.histogram("discriminator_police_class_summary",
-                                                                       self.discriminator_police_class_softmax)
+        self.discriminator_police_class_summary = tf.compat.v1.summary.histogram("discriminator_police_class_summary",
+                                                                                 self.discriminator_police_class_softmax)
         # discriminator fake image summary
-        self.discriminator_thief_summary = tf.summary.histogram("discriminator_thief_summary",
-                                                                self.discriminator_thief_sigmoid)
+        self.discriminator_thief_summary = tf.compat.v1.summary.histogram("discriminator_thief_summary",
+                                                                          self.discriminator_thief_sigmoid)
         # discriminator fake image class summary
-        self.discriminator_thief_class_summary = tf.summary.histogram("discriminator_thief_class_summary",
-                                                                      self.discriminator_thief_class_softmax)
+        self.discriminator_thief_class_summary = tf.compat.v1.summary.histogram("discriminator_thief_class_summary",
+                                                                                self.discriminator_thief_class_softmax)
         # generator summary
         self.generator_summary = tf.summary.image(
             "generator_summary", self.generator)
@@ -118,30 +119,30 @@ class CAN(object):
 
         # Creating loss function - Find cost
         # real image discriminator cost
-        self.discriminator_police_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+        self.discriminator_police_loss = tf.reduce_mean(input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(
             logits=self.discriminator_police,
             labels=tf.ones_like(self.discriminator_police_sigmoid) * 0.9))
 
         # fake image discriminator cost
-        self.discriminator_thief_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+        self.discriminator_thief_loss = tf.reduce_mean(input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(
             logits=self.discriminator_thief,
             labels=tf.zeros_like(self.discriminator_thief_sigmoid)))
 
         # real image discriminator classification cost
-        self.discriminator_loss_class_real = tf.reduce_mean(tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
+        self.discriminator_loss_class_real = tf.reduce_mean(input_tensor=tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
             logits=self.discriminator_police_class,
             labels=1.0 * self.y))
 
         # generator image discriminator classification cost
-        self.generator_loss_class_fake = tf.reduce_mean(tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
+        self.generator_loss_class_fake = tf.reduce_mean(input_tensor=tf.compat.v1.nn.softmax_cross_entropy_with_logits_v2(
             logits=self.discriminator_thief_class,
             labels=(1.0 / self.label_dim) *
             tf.ones_like(self.discriminator_thief_class_softmax)))
 
         # generator cost
         self.generator_loss_fake = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(logits=self.discriminator_thief,
-                                                    labels=tf.ones_like(self.discriminator_thief_sigmoid)))
+            input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(logits=self.discriminator_thief,
+                                                                 labels=tf.ones_like(self.discriminator_thief_sigmoid)))
 
         # Generator fake image cost
 
@@ -160,15 +161,15 @@ class CAN(object):
                                                                    self.discriminator_police_loss)
         # d_loss_real_sum
 
-        self.discriminator_thief_loss_summary = tf.summary.scalar("discriminator_thief_loss_summary",
-                                                                  self.discriminator_thief_loss)
+        self.discriminator_thief_loss_summary = tf.compat.v1.summary.scalar("discriminator_thief_loss_summary",
+                                                                            self.discriminator_thief_loss)
         # d_loss_fake_sum
 
-        self.discriminator_police_class_loss_summary = tf.summary.scalar("discriminator_police_class_loss",
-                                                                         self.discriminator_loss_class_real)
+        self.discriminator_police_class_loss_summary = tf.compat.v1.summary.scalar("discriminator_police_class_loss",
+                                                                                   self.discriminator_loss_class_real)
         # d_loss_class_real_sum
-        self.generator_loss_class_fake_summary = tf.summary.scalar("generator_loss_class_fake",
-                                                                   self.generator_loss_class_fake)
+        self.generator_loss_class_fake_summary = tf.compat.v1.summary.scalar("generator_loss_class_fake",
+                                                                             self.generator_loss_class_fake)
         # g_loss_class_fake_sum
 
         self.generator_loss_summary = tf.summary.scalar(
@@ -178,26 +179,26 @@ class CAN(object):
             "discriminator_loss_summary", self.discriminator_loss)
         # d_loss_sum
 
-        t_vars = tf.trainable_variables()
+        t_vars = tf.compat.v1.trainable_variables()
         self.discriminator_vars = [var for var in t_vars if 'd_' in var.name]
         self.generator_vars = [var for var in t_vars if 'g_' in var.name]
         # Creating checkpoint saver
-        self.saver = tf.train.Saver()
+        self.saver = tf.compat.v1.train.Saver()
 
     def train(self):
         # Creating Optimizer
-        discriminator_optimizer = tf.train.AdamOptimizer(self.learning_rate, beta1=self.beta1).minimize(
+        discriminator_optimizer = tf.compat.v1.train.AdamOptimizer(self.learning_rate, beta1=self.beta1).minimize(
             self.discriminator_loss,
             var_list=self.discriminator_vars)
-        generator_optimizer = tf.train.AdamOptimizer(self.learning_rate, beta1=self.beta1).minimize(self.generator_loss,
-                                                                                                    var_list=self.generator_vars)
+        generator_optimizer = tf.compat.v1.train.AdamOptimizer(self.learning_rate, beta1=self.beta1).minimize(self.generator_loss,
+                                                                                                              var_list=self.generator_vars)
 
         # tensorboard
         generator_optimizer_summary = tf.summary.merge(
             [self.random_noise_summary, self.discriminator_thief_summary, self.generator_summary,
              self.discriminator_thief_loss_summary, self.generator_loss_summary])
 
-        discriminator_optimizer_summary = tf.summary.merge(
+        discriminator_optimizer_summary = tf.compat.v1.summary.merge(
             [self.random_noise_summary, self.discriminator_police_summary,
              self.discriminator_police_loss_summary, self.discriminator_loss_summary,
              self.discriminator_police_class_loss_summary, self.generator_loss_class_fake_summary])
@@ -206,7 +207,7 @@ class CAN(object):
         self.writer = tf.summary.FileWriter(
             self.tensorboard_dir, self.sess.graph)
 
-        tf.global_variables_initializer().run()
+        tf.compat.v1.global_variables_initializer().run()
 
         # Creating sample -> test part
         # sample_random_noise = np.random.normal(0, 1, [self.sample_size, self.random_noise_dim]).astype(np.float32)
@@ -329,7 +330,7 @@ class CAN(object):
 
     # discriminator
     def discriminator(self, input_, reuse=False):
-        with tf.variable_scope("discriminator") as scope:
+        with tf.compat.v1.variable_scope("discriminator") as scope:
             if reuse:
                 scope.reuse_variables()  # for reusing variables
             # ! padding -> SAME -> VALID => ops.py

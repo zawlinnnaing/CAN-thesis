@@ -22,15 +22,12 @@ class DCGAN(object):
             os.makedirs(self.sample_dir)
 
     def build_model(self):
-        # Creating a variable
-        self.real_image = tf.placeholder(
-            tf.float32, [64, 256, 256, 3], name='real_images')
-        self.random_noise = tf.placeholder(
-            tf.float32, [None, 100], name='random_noise')
+        ## Creating a variable
+        self.real_image = tf.compat.v1.placeholder(tf.float32, [64, 256, 256, 3], name='real_images')
+        self.random_noise = tf.compat.v1.placeholder(tf.float32, [None, 100], name='random_noise')
 
-        # tensorboard
-        self.random_noise_summary = tf.summary.histogram(
-            "random_noise_summary", self.random_noise)
+        #### tensorboard
+        self.random_noise_summary = tf.compat.v1.summary.histogram("random_noise_summary", self.random_noise)
 
         # model build
         # Creating generator / discriminator
@@ -41,69 +38,66 @@ class DCGAN(object):
             self.generator, reuse=True)
         self.sampler = self.sampler(self.random_noise)
 
-        # tensorboard
-        self.discriminator_police_summary = tf.summary.histogram("discriminator_police_summary",
+        #### tensorboard
+        self.discriminator_police_summary = tf.compat.v1.summary.histogram("discriminator_police_summary",
                                                                  self.discriminator_police_sigmoid)
-        self.discriminator_thief_summary = tf.summary.histogram("discriminator_thief_summary",
+        self.discriminator_thief_summary = tf.compat.v1.summary.histogram("discriminator_thief_summary",
                                                                 self.discriminator_thief_sigmoid)
-        self.generator_summary = tf.summary.image(
-            "generator_summary", self.generator)
+        self.generator_summary = tf.compat.v1.summary.image("generator_summary", self.generator)
 
         # Creating loss function - Find cost
         # real discriminator cost
         self.discriminator_police_loss = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(logits=self.discriminator_police,
+            input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(logits=self.discriminator_police,
                                                     labels=tf.ones_like(self.discriminator_police_sigmoid)))
         # fake discriminator cost
         self.discriminator_thief_loss = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(logits=self.discriminator_thief,
+            input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(logits=self.discriminator_thief,
                                                     labels=tf.zeros_like(self.discriminator_thief_sigmoid)))
 
-        # tensorboard
-        self.discriminator_police_loss_summary = tf.summary.scalar("discriminator_police_loss_summary",
+        #### tensorboard
+        self.discriminator_police_loss_summary = tf.compat.v1.summary.scalar("discriminator_police_loss_summary",
                                                                    self.discriminator_police_loss)
-        self.discriminator_thief_loss_summary = tf.summary.scalar("discriminator_thief_loss_summary",
+        self.discriminator_thief_loss_summary = tf.compat.v1.summary.scalar("discriminator_thief_loss_summary",
                                                                   self.discriminator_thief_loss)
 
         # generator cost
 
         self.generator_loss = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(logits=self.discriminator_thief,
+            input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(logits=self.discriminator_thief,
                                                     labels=tf.ones_like(self.discriminator_thief_sigmoid)))
         # discriminator cost
         self.discriminator_loss = self.discriminator_police_loss + \
             self.discriminator_thief_loss
 
-        # tensorboard
-        self.generator_loss_summary = tf.summary.scalar(
-            "generator_loss_summary", self.generator_loss)
-        self.discriminator_loss_summary = tf.summary.scalar(
-            "discriminator_loss_summary", self.discriminator_loss)
+        #### tensorboard
+        self.generator_loss_summary = tf.compat.v1.summary.scalar("generator_loss_summary", self.generator_loss)
+        self.discriminator_loss_summary = tf.compat.v1.summary.scalar("discriminator_loss_summary", self.discriminator_loss)
 
-        t_vars = tf.trainable_variables()
+        t_vars = tf.compat.v1.trainable_variables()
 
         self.discriminator_vars = [var for var in t_vars if 'd_' in var.name]
         self.generator_vars = [var for var in t_vars if 'g_' in var.name]
 
-        self.saver = tf.train.Saver()
+        self.saver = tf.compat.v1.train.Saver()
 
     def train(self):
         # Creating Optimizer
-        discriminator_optimizer = tf.train.AdamOptimizer(1e-4, beta1=0.7).minimize(self.discriminator_loss,
+        discriminator_optimizer = tf.compat.v1.train.AdamOptimizer(1e-4, beta1=0.7).minimize(self.discriminator_loss,
                                                                                    var_list=self.discriminator_vars)
-        generator_optimizer = tf.train.AdamOptimizer(1e-4, beta1=0.7).minimize(self.generator_loss,
+        generator_optimizer = tf.compat.v1.train.AdamOptimizer(1e-4, beta1=0.7).minimize(self.generator_loss,
                                                                                var_list=self.generator_vars)
 
-        # tensorboard
-        generator_optimizer_summary = tf.summary.merge(
+        #### tensorboard
+        generator_optimizer_summary = tf.compat.v1.summary.merge(
             [self.random_noise_summary, self.discriminator_thief_summary, self.generator_summary,
              self.discriminator_thief_loss_summary, self.generator_loss_summary])
-        discriminator_optimizer_summary = tf.summary.merge(
+        discriminator_optimizer_summary = tf.compat.v1.summary.merge(
             [self.random_noise_summary, self.discriminator_police_summary,
              self.discriminator_police_loss_summary, self.discriminator_loss_summary])
         self.writer = tf.summary.FileWriter("./logs", self.sess.graph)
 
-        tf.global_variables_initializer().run()
+        tf.compat.v1.global_variables_initializer().run()
 
         # Creating sample -> test part
         sample_random_noise = np.random.uniform(-1, 1, size=(64, 100))
@@ -202,7 +196,7 @@ class DCGAN(object):
                                     checkpoint_dir_path, counter)
 
     def discriminator(self, input_, reuse=False):
-        with tf.variable_scope("discriminator") as scope:
+        with tf.compat.v1.variable_scope("discriminator") as scope:
             if reuse:
                 scope.reuse_variables()
 
@@ -235,48 +229,33 @@ class DCGAN(object):
             return tf.nn.sigmoid(discriminator_output), discriminator_output
 
     def generator(self, random_noise):
-        with tf.variable_scope("generator") as scope:
-            # (?, 100), 16,384 -> (100, 16,384)
-            generator_linear = linear(
-                random_noise, 64 * 16 * 4 * 4, 'g_h0_lin')
-            generator_reshape = tf.reshape(
-                generator_linear, [-1, 4, 4, 64 * 16])  # (?, 4, 4, 1024)
-            generator_input = tf.nn.relu(batch_norm(
-                generator_reshape, 'g_bn0'))  # (?, 4, 4, 1024)
+        with tf.compat.v1.variable_scope("generator") as scope:
+            generator_linear = linear(random_noise, 64 * 16 * 4 * 4, 'g_h0_lin')  # (?, 100), 16,384 -> (100, 16,384)
+            generator_reshape = tf.reshape(generator_linear, [-1, 4, 4, 64 * 16])  # (?, 4, 4, 1024)
+            generator_input = tf.nn.relu(batch_norm(generator_reshape, 'g_bn0'))  # (?, 4, 4, 1024)
 
-            generator_layer1 = deconv2d(
-                generator_input, [64, 8, 8, 64 * 16], name='g_layer1')  # (?, 8, 8, 512)
-            generator_layer1 = tf.nn.relu(batch_norm(
-                generator_layer1, 'g_bn1'))  # (?, 8, 8, 512)
+            generator_layer1 = deconv2d(generator_input, [64, 8, 8, 64 * 16], name='g_layer1')  # (?, 8, 8, 512)
+            generator_layer1 = tf.nn.relu(batch_norm(generator_layer1, 'g_bn1'))  # (?, 8, 8, 512)
 
-            generator_layer2 = deconv2d(
-                generator_layer1, [64, 16, 16, 64 * 8], name='g_layer2')  # (?, 16, 16, 256)
-            generator_layer2 = tf.nn.relu(batch_norm(
-                generator_layer2, 'g_bn2'))  # (?, 16, 16, 256)
+            generator_layer2 = deconv2d(generator_layer1, [64, 16, 16, 64 * 8], name='g_layer2')  # (?, 16, 16, 256)
+            generator_layer2 = tf.nn.relu(batch_norm(generator_layer2, 'g_bn2'))  # (?, 16, 16, 256)
 
-            generator_layer3 = deconv2d(
-                generator_layer2, [64, 32, 32, 64 * 4], name='g_layer3')  # (?, 32, 32, 128)
-            generator_layer3 = tf.nn.relu(batch_norm(
-                generator_layer3, 'g_bn3'))  # (?, 32, 32, 128)
+            generator_layer3 = deconv2d(generator_layer2, [64, 32, 32, 64 * 4], name='g_layer3')  # (?, 32, 32, 128)
+            generator_layer3 = tf.nn.relu(batch_norm(generator_layer3, 'g_bn3'))  # (?, 32, 32, 128)
 
-            generator_layer4 = deconv2d(
-                generator_layer3, [64, 64, 64, 64 * 2], name='g_layer4')  # (?, 64, 64, 128)
-            generator_layer4 = tf.nn.relu(batch_norm(
-                generator_layer4, 'g_bn4'))  # (?, 64, 64, 128)
+            generator_layer4 = deconv2d(generator_layer3, [64, 64, 64, 64 * 2], name='g_layer4')  # (?, 64, 64, 128)
+            generator_layer4 = tf.nn.relu(batch_norm(generator_layer4, 'g_bn4'))  # (?, 64, 64, 128)
 
-            generator_layer5 = deconv2d(
-                generator_layer4, [64, 128, 128, 64], name='g_layer5')  # (?, 128, 128, 64)
-            generator_layer5 = tf.nn.relu(batch_norm(
-                generator_layer5, 'g_bn5'))  # (?, 128, 128, 64)
+            generator_layer5 = deconv2d(generator_layer4, [64, 128, 128, 64], name='g_layer5')  # (?, 128, 128, 64)
+            generator_layer5 = tf.nn.relu(batch_norm(generator_layer5, 'g_bn5'))  # (?, 128, 128, 64)
 
-            generator_output = deconv2d(
-                generator_layer5, [64, 256, 256, 3], name='g_output')  # (?, 256, 256, 3)
+            generator_output = deconv2d(generator_layer5, [64, 256, 256, 3], name='g_output')  # (?, 256, 256, 3)
             generator_output = tf.nn.tanh(generator_output)  # (?, 256, 256, 3)
 
             return generator_output  # (?, 64, 64, 3)
 
     def sampler(self, random_noise):
-        with tf.variable_scope("generator") as scope:
+        with tf.compat.v1.variable_scope("generator") as scope:
             scope.reuse_variables()
 
             # (?, 100), 16,384 -> (100, 16,384)
